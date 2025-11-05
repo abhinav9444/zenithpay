@@ -5,6 +5,10 @@ export interface User {
   photoURL: string;
   balance: number;
   accountNumber: string;
+  history: {
+    totalTransactions: number;
+    averageAmount: number;
+  }
 }
 
 export interface Transaction {
@@ -18,4 +22,11 @@ export interface Transaction {
   type: 'sent' | 'received';
   fraudReported?: boolean;
   fraudReason?: string;
+  riskScore?: number;
+  riskReason?: string;
+}
+
+export interface UserHistory {
+  avgAmount: number;
+  transactions: Transaction[];
 }

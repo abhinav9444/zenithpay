@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,6 +25,15 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -43,6 +52,8 @@ export function SendMoneyDialog({ open, onOpenChange }: SendMoneyDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [warning, setWarning] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<z.infer<typeof formSchema> | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,18 +64,32 @@ export function SendMoneyDialog({ open, onOpenChange }: SendMoneyDialogProps) {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+      setWarning(null);
+      setFormValues(null);
+    }
+  }, [open, form]);
+
+  const handleTransaction = (values: z.infer<typeof formSchema>, bypassWarning = false) => {
     if (!user) return;
+    setFormValues(values);
 
     startTransition(async () => {
-      const result = await sendMoney(user.uid, values.receiver, values.amount, values.description);
+      const result = await sendMoney(user.uid, values.receiver, values.amount, values.description, bypassWarning);
+
+      if (result.warning) {
+        setWarning(result.message);
+        return;
+      }
+      
       if (result.success) {
         toast({
           title: 'Success',
           description: result.message,
         });
         onOpenChange(false);
-        form.reset();
       } else {
         toast({
           variant: 'destructive',
@@ -73,9 +98,21 @@ export function SendMoneyDialog({ open, onOpenChange }: SendMoneyDialogProps) {
         });
       }
     });
+  }
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    handleTransaction(values, false);
   };
 
+  const onConfirmWarning = () => {
+    if (formValues) {
+        handleTransaction(formValues, true);
+    }
+    setWarning(null);
+  }
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -140,5 +177,26 @@ export function SendMoneyDialog({ open, onOpenChange }: SendMoneyDialogProps) {
         </Form>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!warning} onOpenChange={() => setWarning(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                {warning}
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <Button variant="ghost" onClick={() => setWarning(null)} disabled={isPending}>
+                Cancel
+            </Button>
+            <AlertDialogAction onClick={onConfirmWarning} disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Yes, proceed
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

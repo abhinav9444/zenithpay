@@ -1,4 +1,4 @@
-import type { User, Transaction } from './types';
+import type { User, Transaction, UserHistory } from './types';
 
 // Helper to generate a random 6-digit alphanumeric account number
 const generateAccountNumber = () => {
@@ -10,7 +10,6 @@ const generateAccountNumber = () => {
   return result;
 };
 
-
 // In-memory store to simulate a database
 let users: User[] = [
   {
@@ -20,6 +19,7 @@ let users: User[] = [
     photoURL: 'https://picsum.photos/seed/user1/100/100',
     balance: 5000.75,
     accountNumber: 'AB12CD',
+    history: { totalTransactions: 1, averageAmount: 75.50 }
   },
   {
     uid: 'user-2-uid',
@@ -28,6 +28,7 @@ let users: User[] = [
     photoURL: 'https://picsum.photos/seed/user2/100/100',
     balance: 1250.25,
     accountNumber: 'EF34GH',
+    history: { totalTransactions: 1, averageAmount: 250.00 }
   },
   {
     uid: 'user-3-uid',
@@ -36,6 +37,7 @@ let users: User[] = [
     photoURL: 'https://picsum.photos/seed/user3/100/100',
     balance: 1000000,
     accountNumber: 'IJ56KL',
+    history: { totalTransactions: 1, averageAmount: 1000.00 }
   }
 ];
 
@@ -49,6 +51,8 @@ let transactions: Transaction[] = [
     description: 'Coffee supplies',
     status: 'completed',
     type: 'received',
+    riskScore: 10,
+    riskReason: 'Routine transaction to a known recipient.',
   },
   {
     id: 'txn-2',
@@ -59,6 +63,8 @@ let transactions: Transaction[] = [
     description: 'Dinner reimbursement',
     status: 'completed',
     type: 'sent',
+    riskScore: 5,
+    riskReason: 'Low amount to a frequent contact.',
   },
     {
     id: 'txn-3',
@@ -69,6 +75,8 @@ let transactions: Transaction[] = [
     description: 'Initial deposit',
     status: 'completed',
     type: 'received',
+    riskScore: 0,
+    riskReason: 'Standard bank deposit.',
   },
 ];
 
@@ -76,15 +84,10 @@ let transactions: Transaction[] = [
 
 export const db_findUserBy = async (field: 'uid' | 'email' | 'accountNumber', value: string): Promise<User | undefined> => {
     const queryValue = value.toLowerCase();
-
     return users.find((user) => {
-        if (field === 'email') {
-            return user.email.toLowerCase() === queryValue;
-        }
-        if (field === 'accountNumber') {
-            return user.accountNumber.toLowerCase() === queryValue;
-        }
-        return user[field] === value; // uid is case-sensitive
+        if (field === 'email') return user.email.toLowerCase() === queryValue;
+        if (field === 'accountNumber') return user.accountNumber.toLowerCase() === queryValue;
+        return user[field] === value;
     });
 };
 
@@ -94,10 +97,12 @@ export const db_addUser = async (newUser: { uid: string; email: string; name: st
     if (!existingUser.accountNumber) {
         existingUser.accountNumber = generateAccountNumber();
     }
+    if (!existingUser.history) {
+        existingUser.history = { totalTransactions: 0, averageAmount: 0 };
+    }
     return existingUser;
   }
 
-  // Check if account number already exists, and regenerate if it does.
   let newAccountNumber = generateAccountNumber();
   while(await db_findUserBy('accountNumber', newAccountNumber)){
     newAccountNumber = generateAccountNumber();
@@ -105,8 +110,9 @@ export const db_addUser = async (newUser: { uid: string; email: string; name: st
 
   const user: User = {
     ...newUser,
-    balance: 1000, // Initial balance for new users
+    balance: 1000,
     accountNumber: newAccountNumber,
+    history: { totalTransactions: 0, averageAmount: 0 }
   };
   users.push(user);
   return user;
@@ -116,10 +122,44 @@ export const db_updateUserBalance = async (uid: string, newBalance: number): Pro
   const userIndex = users.findIndex((user) => user.uid === uid);
   if (userIndex !== -1) {
     users[userIndex].balance = newBalance;
+    
+    // Update user history
+    const userTransactions = await db_getTransactionsForUser(uid);
+    const sentTransactions = userTransactions.filter(tx => tx.type === 'sent');
+    const totalSent = sentTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    const totalTransactions = sentTransactions.length;
+    const averageAmount = totalTransactions > 0 ? totalSent / totalTransactions : 0;
+    
+    users[userIndex].history = {
+        totalTransactions,
+        averageAmount
+    }
+
     return true;
   }
   return false;
 };
+
+export const db_getUserHistory = async (uid: string): Promise<UserHistory> => {
+    const userTransactions = await db_getTransactionsForUser(uid);
+    const sentTransactions = userTransactions.filter(tx => tx.type === 'sent');
+    
+    if (sentTransactions.length === 0) {
+        return {
+            avgAmount: 0,
+            transactions: []
+        };
+    }
+
+    const totalSent = sentTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    const avgAmount = totalSent / sentTransactions.length;
+
+    return {
+        avgAmount,
+        transactions: sentTransactions
+    }
+}
+
 
 // --- Transaction Functions ---
 
@@ -137,7 +177,7 @@ export const db_addTransaction = async (transaction: Omit<Transaction, 'id' | 't
   const newTransaction: Transaction = {
     id: `txn-${Date.now()}-${Math.random()}`,
     ...transaction,
-    type: 'sent' // type is determined by context when fetching, default to sent on creation
+    type: 'sent' 
   };
   transactions.unshift(newTransaction);
   return newTransaction;
