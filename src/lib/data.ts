@@ -1,3 +1,4 @@
+
 import type { User, Transaction, UserHistory } from './types';
 
 // Helper to generate a random 6-digit alphanumeric account number
@@ -85,8 +86,13 @@ let transactions: Transaction[] = [
 export const db_findUserBy = async (field: 'uid' | 'email' | 'accountNumber', value: string): Promise<User | undefined> => {
     const queryValue = value.toLowerCase();
     return users.find((user) => {
-        if (field === 'email') return user.email.toLowerCase() === queryValue;
-        if (field === 'accountNumber') return user.accountNumber.toLowerCase() === queryValue;
+        if (field === 'email') {
+            return user.email.toLowerCase() === queryValue;
+        }
+        if (field === 'accountNumber') {
+            return user.accountNumber.toLowerCase() === queryValue;
+        }
+        // For 'uid', no case conversion is needed
         return user[field] === value;
     });
 };
