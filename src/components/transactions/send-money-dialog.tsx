@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
@@ -38,7 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
-  receiver: z.string().length(6, 'Account number must be 6 characters.'),
+  receiver: z.string().min(6, 'Account number must be 6 characters.'),
   amount: z.coerce.number().positive('Amount must be positive.'),
   description: z.string().min(1, 'Description is required.'),
 });
@@ -118,7 +119,7 @@ export function SendMoneyDialog({ open, onOpenChange }: SendMoneyDialogProps) {
         <DialogHeader>
           <DialogTitle>Send Money</DialogTitle>
           <DialogDescription>
-            Transfer funds to another user. The amount will be deducted from your balance.
+            Transfer funds to another user's 6-digit account number.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

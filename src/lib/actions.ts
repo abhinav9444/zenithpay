@@ -59,9 +59,11 @@ export async function sendMoney(
     return { success: false, message: "You cannot send money to yourself." };
   }
   
+  // Fraud/Anomaly checks
   if (!bypassWarning) {
     const senderHistory = await db_getUserHistory(sender.uid);
     
+    // Velocity check: more than 3 transactions in the last minute
     if (senderHistory.transactions.length > 0) {
         const oneMinuteAgo = Date.now() - 60 * 1000;
         const recentTxCount = senderHistory.transactions.filter(tx => new Date(tx.date).getTime() > oneMinuteAgo).length;
@@ -70,6 +72,7 @@ export async function sendMoney(
         }
     }
 
+    // Anomaly check: amount is 5x greater than average
     if (senderHistory.avgAmount > 0 && amount > senderHistory.avgAmount * 5) {
         return { success: false, warning: true, message: `This transaction of $${amount.toFixed(2)} is much larger than your average of $${senderHistory.avgAmount.toFixed(2)}. Please confirm you want to proceed.`}
     }
