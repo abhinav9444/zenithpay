@@ -64,10 +64,12 @@ export async function sendMoney(
     const senderHistory = await db_getUserHistory(sender.uid);
     
     // 1. Velocity Check
-    const oneMinuteAgo = Date.now() - 60 * 1000;
-    const recentTxCount = senderHistory.transactions.filter(tx => new Date(tx.date).getTime() > oneMinuteAgo).length;
-    if (recentTxCount >= 3) {
-        return { success: false, warning: true, message: "You're making transfers very quickly. Please confirm you want to proceed."}
+    if (senderHistory.transactions.length > 0) {
+        const oneMinuteAgo = Date.now() - 60 * 1000;
+        const recentTxCount = senderHistory.transactions.filter(tx => new Date(tx.date).getTime() > oneMinuteAgo).length;
+        if (recentTxCount >= 3) {
+            return { success: false, warning: true, message: "You're making transfers very quickly. Please confirm you want to proceed."}
+        }
     }
 
     // 2. Anomaly Check

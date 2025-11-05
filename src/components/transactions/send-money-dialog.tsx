@@ -79,12 +79,12 @@ export function SendMoneyDialog({ open, onOpenChange }: SendMoneyDialogProps) {
     startTransition(async () => {
       const result = await sendMoney(user.uid, values.receiver, values.amount, values.description, bypassWarning);
 
-      if (result.warning) {
+      if (result?.warning) {
         setWarning(result.message);
         return;
       }
       
-      if (result.success) {
+      if (result?.success) {
         toast({
           title: 'Success',
           description: result.message,
@@ -94,7 +94,7 @@ export function SendMoneyDialog({ open, onOpenChange }: SendMoneyDialogProps) {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: result.message,
+          description: result?.message || 'An unexpected error occurred.',
         });
       }
     });
