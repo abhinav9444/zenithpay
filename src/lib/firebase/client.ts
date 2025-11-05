@@ -3,14 +3,16 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
+// Hardcoded Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyCirE_T8r9KdP4S0VBu-ks1KI6ikNRyzlA",
+  authDomain: "studio-2700453916-f3cc5.firebaseapp.com",
+  projectId: "studio-2700453916-f3cc5",
+  storageBucket: "studio-2700453916-f3cc5.appspot.com",
+  messagingSenderId: "547373061001",
+  appId: "1:547373061001:web:27115652eb686c7d7dc758"
 };
+
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
